@@ -1,5 +1,5 @@
 #lead-scoring-dataset/
 .venv/
-*.pt
+# *.pt
 __pycache__/
 .ipynb_checkpoints/
