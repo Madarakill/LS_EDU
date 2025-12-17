@@ -6,6 +6,27 @@
 ```
 pip install -r requirements.txt
 ```
+## Запуск (веб)
+
+1) Собрать список признаков (артифактов) препроцессинга:
+
+```
+python scripts/build_artifacts.py
+```
+
+2) Запуск сервер Flask:
+
+```
+python main.py
+```
+
+Веб-интерфейс будет доступен по ссылке `http://127.0.0.1:5000`, для работы необходимо загрузить набор данных для классифицирования в формате`.csv` после классификации для скачивания будет доступен файл `predictions.csv` с колонками `pred_proba` и `pred_label`.
+
+## Запуск (CLI)
+### Пример
+```
+python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model model.pt --artifacts artifacts
+```
 ## Структура проекта
 
 ```
@@ -13,6 +34,27 @@ pip install -r requirements.txt
 ├── lead-scoring-dataset/              # Исходный набор данных
 │ ├── Lead Scoring.csv                 # Основной CSV-файл с лид-данными
 │ └── Leads Data Dictionary.xlsx       # Описание признаков исходного датасета
+|
+├── lead_scoring/                      # Код инференса
+│   ├── __init__.py
+│   ├── artifacts.py                   # Загрузка артефактов из `artifacts/`
+│   ├── preprocess.py                  # Препроцессинг
+│   ├── model.py                       # Архитектура LeadMLP
+│   └── predict.py                     # Инференс модели
+|
+├── artifacts/                         # Артефакты препроцессинга (build_artifacts.py)
+│   ├── ct.joblib                      # ColumnTransformer
+│   ├── scaler.joblib                  # StandardScaler
+│   ├── feature_names.json             # Порядок признаков на вход модели
+│   └── config.json                    # Осичтка
+|
+├── scripts/
+│   ├── build_artifacts.py             # Сборка artifacts/ из исходного датасета
+│   ├── predict_csv.py                 # Классификация через терминал
+│   └── train_model.py                 # Переобучение модели (в данный момент не используется)
+|
+├── templates/
+│   └── index.html                     # HTML страница
 |
 ├── nn-dataset/                        # Предобработанные данные для нейронной сети
 │ ├── leads_train_nn.csv               # Обучающая выборка
@@ -24,6 +66,8 @@ pip install -r requirements.txt
 ├── requirements.txt                   # Список зависимостей проекта
 ├── model.pt                           # Сохранённая обученная модель (Модель с лучшей точностью классификации)
 ├── model_last.pt                      # Сохранённая обученная модель (Модель сохраненная на последней эпохе обучения)
+├── main.py                            # Flask-приложение (web)
+├── leads_1000.csv                     # Тестовый CSV для проверки
 └── README.md                          # Описание проекта
 ```
 
@@ -36,7 +80,8 @@ pip install -r requirements.txt
 - анализ и предобработка данных;
 - разработка архитектуры нейронной сети LeadMLP;
 - обучение, валидация и тестирование модели;
-- сохранение модели для дальнейшего использования. 
+- сохранение модели для дальнейшего использования;
+- создание логики приложения и веб интерфейса.
 
 ## Модель LeadMLP
 Представляет собой многослойный перцептрон, принимающий на вход предобработанные табличные данные.
