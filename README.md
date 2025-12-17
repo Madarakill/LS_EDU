@@ -46,7 +46,7 @@ python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.c
 │   ├── ct.joblib                      # ColumnTransformer
 │   ├── scaler.joblib                  # StandardScaler
 │   ├── feature_names.json             # Порядок признаков на вход модели
-│   └── config.json                    # Осичтка
+│   └── config.json                    # Очистка
 |
 ├── scripts/
 │   ├── build_artifacts.py             # Сборка artifacts/ из исходного датасета
