@@ -14,8 +14,8 @@ from lead_scoring.predict import load_model, predict_dataframe
 
 
 def main() -> int:
-    # Провеки работы через консоль
-    # Пример .\.venv\Scripts\python.exe scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model model.pt --artifacts artifacts
+    # Проверки работы через консоль
+    # Пример python scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model model.pt --artifacts artifacts
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Path to input CSV")
     parser.add_argument("--output", required=True, help="Path to output CSV with predictions")

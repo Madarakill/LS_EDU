@@ -197,7 +197,7 @@ def main() -> int:
         df_val_nn[num_feat_cols] = scaler.transform(df_val_nn[num_feat_cols])
         df_test_nn[num_feat_cols] = scaler.transform(df_test_nn[num_feat_cols])
 
-    # Сохраняение предпроцессинга
+    # Сохранение предпроцессинга
     joblib.dump(ct, out_dir / "ct.joblib")
     joblib.dump(scaler, out_dir / "scaler.joblib")
     (out_dir / "feature_names.json").write_text(
@@ -224,7 +224,7 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    print(f"Артифакты сохранены в: {out_dir}")
+    print(f"Артефакты сохранены в: {out_dir}")
     print(f"Признаков: {len(feature_names)} | Raw: {len(raw_cat_cols)} cat + {len(raw_num_cols)} num")
     return 0
 
