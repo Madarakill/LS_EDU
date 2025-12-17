@@ -3,5 +3,5 @@
 # *.pt
 __pycache__/
 .ipynb_checkpoints/
-artifacts/
+#artifacts/
 predictions*.csv
