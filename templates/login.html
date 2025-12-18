@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Вход</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 32px; }
+      .box { max-width: 520px; }
+      .row { margin: 12px 0; }
+      .error { color: #b00020; }
+      .btn { border: 1px solid #ddd; background: #fff; padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 14px; line-height: 1.2; }
+      .btn:hover { background: #fafafa; }
+      input { padding: 8px; width: 100%; max-width: 360px; font-size: 14px; line-height: 1.2; }
+      code { background: #f5f5f5; padding: 2px 6px; border-radius: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>Вход в АС ИСПКП</h1>
+      <p>Пользователи: <code>user</code>, <code>operator</code>, <code>admin</code>.</p>
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+      <form action="/login" method="post">
+        <div class="row">
+          <label>Логин:<br /><input type="text" name="login" autocomplete="username" required /></label>
+        </div>
+        <div class="row">
+          <label>Пароль:<br /><input type="password" name="password" autocomplete="current-password" required /></label>
+        </div>
+        <div class="row">
+          <button type="submit" class="btn">Войти</button>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
