@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import random
 import torch
 from sklearn.model_selection import train_test_split
 from torch import nn
@@ -13,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset
 
 import sys
 
-# Подготовка для обучения модели через веб-интерфейс, в данный момент не используется
+# Исполняемый файл для обучения модели через веб-интерфейс
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -44,7 +45,7 @@ def _to_dense(matrix):
     return matrix.toarray() if hasattr(matrix, "toarray") else np.asarray(matrix)
 
 
-def clean_like_training(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+def prepare_raw_dataframe(df: pd.DataFrame, config: dict) -> pd.DataFrame:
     df = df.copy()
     target_col = config["target_col"]
 
@@ -69,7 +70,7 @@ def clean_like_training(df: pd.DataFrame, config: dict) -> pd.DataFrame:
 
     unknown_value = config.get("unknown_value", "Unknown")
     for col in df.select_dtypes(include=["object"]).columns:
-        df[col] = df[col].fillna(unknown_value)
+        df[col] = df[col].fillna(unknown_value).astype(str).str.strip().str.lower()
 
     for col, median_value in config["num_medians"].items():
         if col in df.columns:
@@ -118,7 +119,7 @@ def transform(df: pd.DataFrame, artifacts_dir: str | Path) -> tuple[np.ndarray, 
     for col in raw_cat_cols:
         if col not in X.columns:
             X[col] = unknown_value
-        X[col] = X[col].astype(str).fillna(unknown_value)
+        X[col] = X[col].astype(str).fillna(unknown_value).str.strip().str.lower()
 
     for col in raw_num_cols:
         if col not in X.columns:
@@ -138,41 +139,48 @@ def transform(df: pd.DataFrame, artifacts_dir: str | Path) -> tuple[np.ndarray, 
     return x, y
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", default="lead-scoring-dataset/Lead Scoring.csv")
-    parser.add_argument("--artifacts", default="artifacts")
-    parser.add_argument("--out", default="model_1.pt")
-    parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--patience", type=int, default=8)
-    parser.add_argument("--batch", type=int, default=256)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    args = parser.parse_args()
-
+def train_and_save(
+    *,
+    dataset_path: str | Path,
+    artifacts_dir: str | Path,
+    out_path: str | Path,
+    epochs: int = 50,
+    patience: int = 8,
+    batch_size: int = 256,
+    lr: float = 1e-3,
+    seed: int = 42,
+) -> dict[str, object]:
+    # Переобучение модели LeadMLP.
     device = torch.device("cpu")
-    artifacts = load_artifacts(args.artifacts)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    artifacts = load_artifacts(artifacts_dir)
 
-    df_raw = pd.read_csv(Path(args.dataset), low_memory=False)
-    df = clean_like_training(df_raw, artifacts.config)
+    df_raw = pd.read_csv(Path(dataset_path), low_memory=False)
+    df = prepare_raw_dataframe(df_raw, artifacts.config)
     spl = split(df, artifacts.config["target_col"])
 
-    x_train, y_train = transform(spl.train, args.artifacts)
-    x_val, y_val = transform(spl.val, args.artifacts)
+    x_train, y_train = transform(spl.train, artifacts_dir)
+    x_val, y_val = transform(spl.val, artifacts_dir)
 
-    train_loader = DataLoader(NumpyDataset(x_train, y_train), batch_size=args.batch, shuffle=True)
-    val_loader = DataLoader(NumpyDataset(x_val, y_val), batch_size=args.batch, shuffle=False)
+    train_loader = DataLoader(NumpyDataset(x_train, y_train), batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(NumpyDataset(x_val, y_val), batch_size=batch_size, shuffle=False)
 
     model = LeadMLP(input_layer=len(artifacts.feature_names)).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     best_val_loss = float("inf")
+    best_val_acc = 0.0
+    best_epoch = 0
     no_improve = 0
-    out_path = Path(args.out)
+    out_path = Path(out_path)
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(1, int(epochs) + 1):
         model.train()
         train_loss = 0.0
+        train_correct = 0
         n_train = 0
         for xb, yb in train_loader:
             xb = xb.to(device)
@@ -183,10 +191,13 @@ def main() -> int:
             loss.backward()
             optimizer.step()
             train_loss += float(loss.item()) * len(yb)
+            preds = (torch.sigmoid(logits) >= 0.5).float()
+            train_correct += int((preds == yb).sum().item())
             n_train += len(yb)
 
         model.eval()
         val_loss = 0.0
+        val_correct = 0
         n_val = 0
         with torch.no_grad():
             for xb, yb in val_loader:
@@ -195,24 +206,67 @@ def main() -> int:
                 logits = model(xb)
                 loss = criterion(logits, yb)
                 val_loss += float(loss.item()) * len(yb)
+                preds = (torch.sigmoid(logits) >= 0.5).float()
+                val_correct += int((preds == yb).sum().item())
                 n_val += len(yb)
 
         train_loss /= max(n_train, 1)
         val_loss /= max(n_val, 1)
-        print(f"epoch {epoch:03d} | train_loss={train_loss:.5f} | val_loss={val_loss:.5f}")
+        train_acc = train_correct / max(n_train, 1)
+        val_acc = val_correct / max(n_val, 1)
+        print(
+            f"epoch {epoch:03d} | train_loss={train_loss:.6f} | train_acc={train_acc:.4f} "
+            f"| val_loss={val_loss:.6f} | val_acc={val_acc:.4f}"
+        )
 
         if val_loss < best_val_loss - 1e-4:
             best_val_loss = val_loss
+            best_val_acc = val_acc
+            best_epoch = epoch
             no_improve = 0
             out_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), out_path)
-            print(f"saved: {out_path}")
         else:
             no_improve += 1
 
-        if no_improve >= args.patience:
+        if no_improve >= int(patience):
             print("early stopping")
             break
+
+    return {
+        "out_path": str(out_path),
+        "best_val_loss": best_val_loss,
+        "best_val_acc": best_val_acc,
+        "best_epoch": best_epoch,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", default="lead-scoring-dataset/Lead Scoring.csv")
+    parser.add_argument("--artifacts", default="artifacts")
+    parser.add_argument("--out", default="model.pt")
+    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=8)
+    parser.add_argument("--batch", type=int, default=256)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    result = train_and_save(
+        dataset_path=args.dataset,
+        artifacts_dir=args.artifacts,
+        out_path=args.out,
+        epochs=args.epochs,
+        patience=args.patience,
+        batch_size=args.batch,
+        lr=args.lr,
+        seed=args.seed,
+    )
+    print(
+        f"saved: {result['out_path']} | best_epoch={result['best_epoch']} "
+        f"| best_val_loss={result['best_val_loss']:.6f} | best_val_acc={result['best_val_acc']:.4f}"
+    )
 
     return 0
 
