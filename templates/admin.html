@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 32px; }
+      .box { max-width: 820px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .row { margin: 12px 0; }
+      .btn { border: 1px solid #ddd; background: #fff; padding: 8px 10px; border-radius: 10px; cursor: pointer; text-decoration: none; color: inherit; font-size: 14px; line-height: 1.2; }
+      .btn:hover { background: #fafafa; }
+      .msg { color: #0a7a0a; }
+      .error { color: #b00020; }
+      code { background: #f5f5f5; padding: 2px 6px; border-radius: 6px; }
+      input, button { font-size: 14px; line-height: 1.2; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="topbar">
+        <h1>Admin</h1>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span>{{ user.login }} ({{ user.role }})</span>
+          <a class="btn" href="/">На главную</a>
+          <a class="btn" href="/logout">Выйти</a>
+        </div>
+      </div>
+
+      {% if message %}
+        <p class="msg">{{ message }}</p>
+      {% endif %}
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+
+      <h2>Артефакты</h2>
+      <p>Пересоборка при изменении предобработки <code>artifacts/</code> из исходного набора данных.</p>
+      <form action="/admin/rebuild" method="post">
+        <button class="btn" type="submit">Пересобрать</button>
+      </form>
+
+      <h2>Модель</h2>
+      <p>Замена весов модели и перезапуск <code>model.pt</code> </p>
+      <form action="/admin/model" method="post" enctype="multipart/form-data">
+        <div class="row">
+          <input type="file" name="file" accept=".pt" required />
+        </div>
+        <button class="btn" type="submit">Загрузить model.pt</button>
+      </form>
+
+      <h2>Переобучение</h2>
+      <p>Переобучение модели нейронной сети.</p>
+      <form action="/admin/train" method="post">
+        <div class="row">
+          <label>Набор данных (.cvs): <input type="text" name="dataset" value="lead-scoring-dataset/Lead Scoring.csv" style="width: 100%;" /></label>
+        </div>
+        <div class="row">
+          <label>Колличество эпох: <input type="number" name="epochs" value="10" min="1" /></label>
+          <label style="margin-left:12px;">Без улучшения результата: <input type="number" name="patience" value="3" min="1" /></label>
+        </div>
+        <div class="row">
+          <label>Размер batch_size: <input type="number" name="batch" value="256" min="1" /></label>
+          <label style="margin-left:12px;">Настройка оптимизатора Adam: <input type="number" name="lr" value="0.001" step="0.0001" min="0" /></label>
+        </div>
+        <div class="row">
+          <label>Seed: <input type="number" name="seed" value="42" /></label>
+        </div>
+        <div class="row">
+          <label><input type="checkbox" name="overwrite" /> Перезаписать <code>model.pt</code> (сохранение по умолчанию <code>model_1.pt</code>)</label>
+        </div>
+        <button class="btn" type="submit">Запустить обучение</button>
+      </form>
+    </div>
+  </body>
+</html>

@@ -6,26 +6,39 @@
     <title>Lead Scoring</title>
     <style>
       body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 32px; }
-      .box { max-width: 720px; }
-      .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-      .btn { border: 1px solid #ddd; background: #fff; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+      .box { max-width: 820px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .btn { border: 1px solid #ddd; background: #fff; padding: 8px 10px; border-radius: 10px; cursor: pointer; text-decoration: none; color: inherit; font-size: 14px; line-height: 1.2; }
       .btn:hover { background: #fafafa; }
       .row { margin: 12px 0; }
       .error { color: #b00020; }
       code { background: #f5f5f5; padding: 2px 6px; border-radius: 6px; }
       .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; padding: 16px; }
-      .modal { background: #fff; width: min(720px, 100%); border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+      .modal { background: #fff; width: min(820px, 100%); border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
       .modal h2 { margin: 0 0 8px; }
       .modal pre { white-space: pre-wrap; margin: 0; }
       .modal-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+      small { color: #555; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
+      th { border-bottom: 1px solid #ddd; }
+      input, button { font-size: 14px; line-height: 1.2; }
     </style>
   </head>
   <body>
     <div class="box">
       <div class="topbar">
-        <h1>Автоматизированная система "ИСПКП"</h1>
-        <button type="button" class="btn" id="aboutBtn">Об авторе</button>
+        <h1>АС "ИСПКП"</h1>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <span>{{ user.login }} ({{ user.role }})</span>
+          {% if user.role == 'admin' %}
+            <a class="btn" href="/admin">Admin</a>
+          {% endif %}
+          <button type="button" class="btn" id="aboutBtn">Об авторе</button>
+          <a class="btn" href="/logout">Выйти</a>
+        </div>
       </div>
+
       <p>Для обработки загрузить <code>.csv</code> файл.</p>
 
       {% if error %}
@@ -36,17 +49,48 @@
         <div class="row">
           <label>CSV файл: <input type="file" name="file" accept=".csv" required /></label>
         </div>
+
+        {% if user.role in ['operator', 'admin'] %}
+          <div class="row">
+            <label>Порог (0..1): <input type="number" name="threshold" value="0.5" step="0.01" min="0" max="1" /></label>
+          </div>
+        {% else %}
+          <div class="row">
+            <small>Порог фиксированный: <code>0.5</code> (роль <code>user</code>).</small>
+          </div>
+        {% endif %}
+
         <div class="row">
-          <label>Порог (0..1): <input type="number" name="threshold" value="0.5" step="0.01" min="0" max="1" /></label>
-        </div>
-        <div class="row">
-          <button type="submit">Скачать predictions.csv</button>
+          <button type="submit" class="btn">Классифицировать</button>
         </div>
       </form>
 
-      <hr />
-      <p>Перед первым запуском необходимо выполнить скрипт для фиксации обработки:</p>
-      <pre><code>python scripts\build_artifacts.py</code></pre>
+      {% if download_url %}
+        <div class="row">
+          <a class="btn" href="{{ download_url }}">Скачать predictions.csv</a>
+        </div>
+      {% endif %}
+
+      {% if top10 %}
+        <hr />
+        <h2>Список наиболее заинтересованных абитуриентов</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>pred_proba</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in top10 %}
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ "%.6f"|format(row.pred_proba) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
     </div>
 
     <div class="modal-backdrop" id="aboutModal" aria-hidden="true">
