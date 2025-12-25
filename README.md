@@ -8,6 +8,11 @@
 echo 'alias python=python3' >> ~/.bashrc
 source ~/.bashrc
 ```
+Загрузить содержимое репозитория
+```
+git clone https://github.com/Madarakill/LS_EDU.git
+cd LS_EDU/
+```
 Cоздать и активировать вируальное окружение
 ```
 python -m venv venv
