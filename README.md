@@ -1,8 +1,24 @@
 # Преддипломная практика
 ## Тема: Использование интеллектуального анализа данных для лид-скоринга
 ## Автор: Луттиев Владислав, Учебная группа: о.ИЗДтс 23.2/Б3-22
-Для запуска кода необходимо установить пакеты из `requirements.txt`:
+### Для запуска кода необходимо:
 
+В ОС linux создать alias
+```
+echo 'alias python=python3' >> ~/.bashrc
+source ~/.bashrc
+```
+Загрузить содержимое репозитория
+```
+git clone https://github.com/Madarakill/LS_EDU.git
+cd LS_EDU/
+```
+Cоздать и активировать вируальное окружение
+```
+python -m venv venv
+source venv/bin/activate
+```
+Установить пакеты из `requirements.txt`:
 ```
 pip install -r requirements.txt
 ```
@@ -51,7 +67,7 @@ python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.c
 ├── scripts/
 │   ├── build_artifacts.py             # Сборка artifacts/ из исходного датасета
 │   ├── predict_csv.py                 # Классификация через терминал
-│   └── train_model.py                 # Переобучение модели (в данный момент не используется)
+│   └── train_model.py                 # Переобучение модели
 |
 ├── templates/
 │   └── index.html                     # HTML страница
