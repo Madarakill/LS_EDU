@@ -34,7 +34,12 @@ def main() -> int:
         default=str(default_artifacts),
         help="Папка с артефактами препроцессинга",
     )
-    parser.add_argument("--threshold", type=float, default=0.5, help="Порог срабатывания")
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Порог срабатывания (если не задан, берется из артефактов)",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -47,7 +52,10 @@ def main() -> int:
     model = load_model(args.model, input_dim=len(artifacts.feature_names))
 
     # Считаем предсказания
-    pred = predict_dataframe(df, model=model, artifacts=artifacts, threshold=args.threshold)
+    threshold = args.threshold
+    if threshold is None:
+        threshold = float(artifacts.config.get("threshold", 0.5))
+    pred = predict_dataframe(df, model=model, artifacts=artifacts, threshold=threshold)
 
     # Добавляем колонки с результатом и сохраняем
     out = df.copy()

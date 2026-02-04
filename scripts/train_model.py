@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,7 @@ import pandas as pd
 import random
 import torch
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -169,13 +171,17 @@ def train_and_save(
     val_loader = DataLoader(NumpyDataset(x_val, y_val), batch_size=batch_size, shuffle=False)
 
     model = LeadMLP(input_layer=len(artifacts.feature_names)).to(device)
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    pos_weight_value = (len(y_train) - float(y_train.sum())) / max(float(y_train.sum()), 1.0)
+    criterion = nn.BCEWithLogitsLoss(
+        pos_weight=torch.tensor([pos_weight_value], device=device, dtype=torch.float32)
+    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
 
     best_val_loss = float("inf")
     best_val_acc = 0.0
     best_epoch = 0
     no_improve = 0
+    best_state_dict = None
     out_path = Path(out_path)
 
     for epoch in range(1, int(epochs) + 1):
@@ -225,6 +231,7 @@ def train_and_save(
             best_val_acc = val_acc
             best_epoch = epoch
             no_improve = 0
+            best_state_dict = {k: v.cpu() for k, v in model.state_dict().items()}
             out_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(model.state_dict(), out_path)
         else:
@@ -234,11 +241,31 @@ def train_and_save(
             print("early stopping")
             break
 
+    # Подбор порога классификации по F1 на валидации
+    if best_state_dict is not None:
+        model.load_state_dict(best_state_dict)
+    model.eval()
+    with torch.no_grad():
+        val_tensor = torch.tensor(x_val).to(device)
+        val_probs = torch.sigmoid(model(val_tensor)).cpu().numpy().ravel()
+    thresholds = np.linspace(0.1, 0.9, 81)
+    scores = [f1_score(y_val, (val_probs >= t).astype(int)) for t in thresholds]
+    best_threshold = float(thresholds[int(np.argmax(scores))])
+
+    # Сохранение порога в config.json артефактов
+    artifacts_dir = Path(artifacts_dir)
+    config_path = artifacts_dir / "config.json"
+    if config_path.exists():
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["threshold"] = best_threshold
+        config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+
     return {
         "out_path": str(out_path),
         "best_val_loss": best_val_loss,
         "best_val_acc": best_val_acc,
         "best_epoch": best_epoch,
+        "best_threshold": best_threshold,
     }
 
 
@@ -269,7 +296,8 @@ def main() -> int:
     )
     print(
         f"saved: {result['out_path']} | best_epoch={result['best_epoch']} "
-        f"| best_val_loss={result['best_val_loss']:.6f} | best_val_acc={result['best_val_acc']:.4f}"
+        f"| best_val_loss={result['best_val_loss']:.6f} | best_val_acc={result['best_val_acc']:.4f} "
+        f"| best_threshold={result['best_threshold']:.2f}"
     )
 
     return 0

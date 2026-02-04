@@ -122,7 +122,7 @@ def main() -> int:
         if col in df.columns:
             df[col] = df[col].map({"Yes": 1, "No": 0})
 
-    unknown_value = "unknown"
+    unknown_value = "Unknown"
     for col in df.select_dtypes(include=["object"]).columns:
         df[col] = df[col].fillna(unknown_value).astype(str).str.strip().str.lower()
 
@@ -174,6 +174,7 @@ def main() -> int:
 
     # Проверка признаков (должны совпадать с теми, на которых обучался `model.pt`)
     # (порядок из заголовка nn-dataset/leads_train_nn.csv)
+    nn_train_path = repo_root / "nn-dataset" / "leads_train_nn.csv"
     if nn_train_path.exists():
         expected_cols = pd.read_csv(nn_train_path, nrows=0).columns.tolist()
         if target_col in expected_cols:
@@ -207,6 +208,18 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    # Порог классификации: существующий config.json > 0.5
+    threshold = None
+    existing = out_dir / "config.json"
+    if existing.exists():
+        try:
+            existing_config = json.loads(existing.read_text(encoding="utf-8"))
+            threshold = existing_config.get("threshold")
+        except Exception:
+            threshold = None
+    if threshold is None:
+        threshold = 0.5
+
     config = {
         "target_col": target_col,
         "unknown_value": unknown_value,
@@ -220,6 +233,7 @@ def main() -> int:
         "raw_cat_cols": raw_cat_cols,
         "raw_num_cols": raw_num_cols,
         "num_medians": num_medians,
+        "threshold": float(threshold),
     }
     (out_dir / "config.json").write_text(
         json.dumps(config, ensure_ascii=False, indent=2),
