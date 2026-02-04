@@ -41,7 +41,7 @@ python main.py
 ## Запуск (CLI)
 ### Пример
 ```
-python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model model.pt --artifacts artifacts
+python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model data/models/model.pt --artifacts data/artifacts
 ```
 ## Структура проекта
 
@@ -53,19 +53,24 @@ python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.c
 |
 ├── lead_scoring/                      # Код инференса
 │   ├── __init__.py
-│   ├── artifacts.py                   # Загрузка артефактов из `artifacts/`
+│   ├── artifacts.py                   # Загрузка артефактов из `data/artifacts/`
 │   ├── preprocess.py                  # Препроцессинг
 │   ├── model.py                       # Архитектура LeadMLP
 │   └── predict.py                     # Инференс модели
 |
-├── artifacts/                         # Артефакты препроцессинга (build_artifacts.py)
-│   ├── ct.joblib                      # ColumnTransformer
-│   ├── scaler.joblib                  # StandardScaler
-│   ├── feature_names.json             # Порядок признаков на вход модели
-│   └── config.json                    # Очистка
+├── data/                              # Единый корень данных
+│   ├── artifacts/                     # Артефакты препроцессинга (build_artifacts.py)
+│   │   ├── ct.joblib                  # ColumnTransformer
+│   │   ├── scaler.joblib              # StandardScaler
+│   │   ├── feature_names.json         # Порядок признаков на вход модели
+│   │   └── config.json                # Очистка
+│   ├── models/                        # Сохранённые модели
+│   │   ├── model.pt                   # Основная модель
+│   │   └── model_last.pt              # Модель последней эпохи
+│   └── runs/                          # Результаты предсказаний
 |
 ├── scripts/
-│   ├── build_artifacts.py             # Сборка artifacts/ из исходного датасета
+│   ├── build_artifacts.py             # Сборка data/artifacts/ из исходного датасета
 │   ├── predict_csv.py                 # Классификация через терминал
 │   └── train_model.py                 # Переобучение модели
 |
@@ -80,8 +85,6 @@ python scripts/predict_csv.py --input leads_1000.csv --output predictions_1000.c
 ├── Анализ набора данных.ipynb         # Анализ данных и подготовка признаков
 ├── Модель нейронной сети.ipynb        # Архитектура LeadMLP, обучение, валидация, тестирование
 ├── requirements.txt                   # Список зависимостей проекта
-├── model.pt                           # Сохранённая обученная модель (Модель с лучшей точностью классификации)
-├── model_last.pt                      # Сохранённая обученная модель (Модель сохраненная на последней эпохе обучения)
 ├── main.py                            # Flask-приложение (web)
 ├── leads_1000.csv                     # Тестовый CSV для проверки
 └── README.md                          # Описание проекта
