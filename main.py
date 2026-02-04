@@ -130,13 +130,61 @@ def create_app() -> Flask:
         # operator/admin: можно менять порог
         threshold = 0.5
         if user and user["role"] in {"operator", "admin"}:
-            threshold = float(request.form.get("threshold", "0.5"))
+            try:
+                threshold = float(request.form.get("threshold", "0.5"))
+            except ValueError:
+                return (
+                    render_template(
+                        "index.html",
+                        user=user,
+                        error="Некорректный порог. Укажите число (например 0.5).",
+                        top10=None,
+                        download_url=None,
+                    ),
+                    400,
+                )
 
-        df = pd.read_csv(file, low_memory=False)
+        if file.filename is None or file.filename.strip() == "":
+            return (
+                render_template(
+                    "index.html",
+                    user=user,
+                    error="Имя файла пустое.",
+                    top10=None,
+                    download_url=None,
+                ),
+                400,
+            )
+
+        try:
+            df = pd.read_csv(file, low_memory=False)
+        except Exception:
+            return (
+                render_template(
+                    "index.html",
+                    user=user,
+                    error="Не удалось прочитать CSV. Проверьте формат, разделители и кодировку.",
+                    top10=None,
+                    download_url=None,
+                ),
+                400,
+            )
 
         model = app.config["LS_MODEL"]
         artifacts = app.config["LS_ARTIFACTS"]
-        result = predict_dataframe(df, model=model, artifacts=artifacts, threshold=threshold)
+        try:
+            result = predict_dataframe(df, model=model, artifacts=artifacts, threshold=threshold)
+        except Exception:
+            return (
+                render_template(
+                    "index.html",
+                    user=user,
+                    error="Не удалось выполнить предсказание. Проверьте структуру данных.",
+                    top10=None,
+                    download_url=None,
+                ),
+                400,
+            )
 
         out = df.copy()
         out["pred_proba"] = result.probabilities
