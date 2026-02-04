@@ -87,12 +87,14 @@ def create_app() -> Flask:
         gate = require_login()
         if gate is not None:
             return gate
+        default_threshold = float(app.config["LS_ARTIFACTS"].config.get("threshold", 0.5))
         return render_template(
             "index.html",
             user=get_current_user(),
             error=None,
             top10=None,
             download_url=None,
+            threshold=default_threshold,
         )
 
     @app.post("/predict")
@@ -111,6 +113,7 @@ def create_app() -> Flask:
                     error="Не найден файл в форме (поле file).",
                     top10=None,
                     download_url=None,
+                    threshold=default_threshold,
                 ),
                 400,
             )
@@ -124,16 +127,18 @@ def create_app() -> Flask:
                     error="Нужен файл .csv.",
                     top10=None,
                     download_url=None,
+                    threshold=default_threshold,
                 ),
                 400,
             )
 
-        # user: порог фиксированный 0.5
+        # user: порог по умолчанию из артефактов (если есть)
         # operator/admin: можно менять порог
-        threshold = 0.5
+        default_threshold = float(app.config["LS_ARTIFACTS"].config.get("threshold", 0.5))
+        threshold = default_threshold
         if user and user["role"] in {"operator", "admin"}:
             try:
-                threshold = float(request.form.get("threshold", "0.5"))
+                threshold = float(request.form.get("threshold", str(default_threshold)))
             except ValueError:
                 return (
                     render_template(
@@ -142,6 +147,7 @@ def create_app() -> Flask:
                         error="Некорректный порог. Укажите число (например 0.5).",
                         top10=None,
                         download_url=None,
+                        threshold=default_threshold,
                     ),
                     400,
                 )
@@ -154,6 +160,7 @@ def create_app() -> Flask:
                     error="Имя файла пустое.",
                     top10=None,
                     download_url=None,
+                    threshold=default_threshold,
                 ),
                 400,
             )
@@ -168,6 +175,7 @@ def create_app() -> Flask:
                     error="Не удалось прочитать CSV. Проверьте формат, разделители и кодировку.",
                     top10=None,
                     download_url=None,
+                    threshold=default_threshold,
                 ),
                 400,
             )
@@ -184,6 +192,7 @@ def create_app() -> Flask:
                     error="Не удалось выполнить предсказание. Проверьте структуру данных.",
                     top10=None,
                     download_url=None,
+                    threshold=default_threshold,
                 ),
                 400,
             )
@@ -221,6 +230,7 @@ def create_app() -> Flask:
             error=None,
             top10=top10,
             download_url=url_for("download", run_id=run_id),
+            threshold=default_threshold,
         )
 
     @app.get("/download/<run_id>")

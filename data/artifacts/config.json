@@ -1,6 +1,6 @@
 {
   "target_col": "Converted",
-  "unknown_value": "unknown",
+  "unknown_value": "Unknown",
   "id_cols": [
     "Prospect ID",
     "Lead Number"
@@ -114,5 +114,6 @@
     "I agree to pay the amount through cheque": 0.0,
     "A free copy of Mastering The Interview": 0.0,
     "Recent_Contact": 1.0
-  }
+  },
+  "threshold": 0.65
 }

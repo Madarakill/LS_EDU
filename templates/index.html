@@ -52,11 +52,11 @@
 
         {% if user.role in ['operator', 'admin'] %}
           <div class="row">
-            <label>Порог (0..1): <input type="number" name="threshold" value="0.5" step="0.01" min="0" max="1" /></label>
+            <label>Порог (0..1): <input type="number" name="threshold" value="{{ '%.2f'|format(threshold) }}" step="0.01" min="0" max="1" /></label>
           </div>
         {% else %}
           <div class="row">
-            <small>Порог фиксированный: <code>0.5</code> (роль <code>user</code>).</small>
+            <small>Порог фиксированный: <code>{{ '%.2f'|format(threshold) }}</code> (роль <code>user</code>).</small>
           </div>
         {% endif %}
 
