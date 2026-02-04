@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -15,13 +16,25 @@ from lead_scoring.predict import load_model, predict_dataframe
 
 def main() -> int:
     # Проверки работы через консоль
-    # Пример python scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model model.pt --artifacts artifacts
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="Path to input CSV")
-    parser.add_argument("--output", required=True, help="Path to output CSV with predictions")
-    parser.add_argument("--model", default="model.pt", help="Path to model state_dict .pt")
-    parser.add_argument("--artifacts", default="artifacts", help="Directory with saved preprocessing pipeline")
-    parser.add_argument("--threshold", type=float, default=0.5, help="Threshold for label")
+    # Пример:
+    # python scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model data/models/model.pt --artifacts data/artifacts
+    data_dir = Path(os.environ.get("LS_DATA_DIR", REPO_ROOT / "data"))
+    default_model = Path(os.environ.get("LS_MODEL_PATH", data_dir / "models" / "model.pt"))
+    default_artifacts = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
+    parser = argparse.ArgumentParser(
+        description="Пакетное предсказание по CSV.",
+        add_help=False,
+    )
+    parser.add_argument("-h", "--help", action="help", help="Показать справку и выйти")
+    parser.add_argument("--input", required=True, help="Путь к входному CSV")
+    parser.add_argument("--output", required=True, help="Путь к выходному CSV с предсказаниями")
+    parser.add_argument("--model", default=str(default_model), help="Путь к файлу модели (.pt)")
+    parser.add_argument(
+        "--artifacts",
+        default=str(default_artifacts),
+        help="Папка с артефактами препроцессинга",
+    )
+    parser.add_argument("--threshold", type=float, default=0.5, help="Порог срабатывания")
     args = parser.parse_args()
 
     input_path = Path(args.input)

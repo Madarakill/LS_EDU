@@ -9,6 +9,7 @@ from __future__ import annotations
 # - config.json: параметры очистки/заполнения пропусков/списки колонок
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,12 +26,14 @@ class Artifacts:
 
 
 def artifacts_dir() -> Path:
-    # Папка
-    return Path(__file__).resolve().parent.parent / "artifacts"
+    # Папка с артефактами (data/artifacts по умолчанию)
+    repo_root = Path(__file__).resolve().parent.parent
+    data_dir = Path(os.environ.get("LS_DATA_DIR", repo_root / "data"))
+    return Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
 
 
 def load_artifacts(dir_path: str | Path | None = None) -> Artifacts:
-    # Загружает артефакты из указанной директории (artifacts/ по умолчанию)
+    # Загружает артефакты из указанной директории (data/artifacts по умолчанию)
     # Возвращает объект Artifacts, который затем используется в preprocess.py и predict.py
     base = Path(dir_path) if dir_path is not None else artifacts_dir()
     config = json.loads((base / "config.json").read_text(encoding="utf-8"))

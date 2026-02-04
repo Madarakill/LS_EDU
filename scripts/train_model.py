@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -242,10 +243,13 @@ def train_and_save(
 
 
 def main() -> int:
+    data_dir = Path(os.environ.get("LS_DATA_DIR", REPO_ROOT / "data"))
+    default_artifacts = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
+    default_out = Path(os.environ.get("LS_MODEL_PATH", data_dir / "models" / "model.pt"))
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default="lead-scoring-dataset/Lead Scoring.csv")
-    parser.add_argument("--artifacts", default="artifacts")
-    parser.add_argument("--out", default="model.pt")
+    parser.add_argument("--artifacts", default=str(default_artifacts))
+    parser.add_argument("--out", default=str(default_out))
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--patience", type=int, default=8)
     parser.add_argument("--batch", type=int, default=256)

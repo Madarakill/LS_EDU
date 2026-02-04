@@ -20,11 +20,13 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.secret_key = auth_config.SECRET_KEY
 
-    # Основные пути
-    artifacts_dir = Path(os.environ.get("LS_ARTIFACTS_DIR", "artifacts"))
-    model_path = Path(os.environ.get("LS_MODEL_PATH", "model.pt"))
-    runs_dir = Path(os.environ.get("LS_RUNS_DIR", "runs"))
+    # Основные пути (корень данных: data/)
+    data_dir = Path(os.environ.get("LS_DATA_DIR", "data"))
+    artifacts_dir = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
+    model_path = Path(os.environ.get("LS_MODEL_PATH", data_dir / "models" / "model.pt"))
+    runs_dir = Path(os.environ.get("LS_RUNS_DIR", data_dir / "runs"))
     runs_dir.mkdir(parents=True, exist_ok=True)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
 
     def reload_pipeline() -> None:
         # Перезагрузка при смене модели
@@ -316,7 +318,7 @@ def create_app() -> Flask:
         seed = int(request.form.get("seed") or "42")
         overwrite = (request.form.get("overwrite") or "") == "on"
 
-        out_path = model_path if overwrite else Path("model_1.pt")
+        out_path = model_path if overwrite else model_path.with_name("model_1.pt")
 
         try:
             from scripts.train_model import train_and_save

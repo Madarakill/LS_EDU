@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -22,18 +23,19 @@ def main() -> int:
     # - читает исходный датасет `Lead Scoring.csv`
     # - повторяет ключевые шаги очистки/преобразований (как сделано в ноутбуке с анализом)
     # - кодирование категорий OneHot и скейлинг числовых на train-части
-    # - сохраняет всё в папку `artifacts/`, чтобы инференс работал стабильно на любых новых CSV
+    # - сохраняет всё в папку `data/artifacts/`, чтобы инференс работал стабильно на любых новых CSV
     #
     # На выходе создаются файлы:
-    # - artifacts/ct.joblib: ColumnTransformer (OneHotEncoder + passthrough числовых)
-    # - artifacts/scaler.joblib: StandardScaler для num__* признаков
-    # - artifacts/feature_names.json: фиксированный порядок признаков на вход нейросети
-    # - artifacts/config.json: параметры очистки/медианы/списки колонок.
+    # - data/artifacts/ct.joblib: ColumnTransformer (OneHotEncoder + passthrough числовых)
+    # - data/artifacts/scaler.joblib: StandardScaler для num__* признаков
+    # - data/artifacts/feature_names.json: фиксированный порядок признаков на вход нейросети
+    # - data/artifacts/config.json: параметры очистки/медианы/списки колонок.
 
     repo_root = Path(__file__).resolve().parent.parent
     dataset_path = repo_root / "lead-scoring-dataset" / "Lead Scoring.csv"
     nn_train_path = repo_root / "nn-dataset" / "leads_train_nn.csv"
-    out_dir = repo_root / "artifacts"
+    data_dir = Path(os.environ.get("LS_DATA_DIR", repo_root / "data"))
+    out_dir = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if not dataset_path.exists():
@@ -231,4 +233,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
