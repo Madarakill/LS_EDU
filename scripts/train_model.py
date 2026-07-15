@@ -20,9 +20,9 @@ from torch.utils.data import DataLoader, Dataset
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from lead_scoring.artifacts import load_artifacts
-from lead_scoring.model import LeadMLP
-from lead_scoring.preprocess import clean_raw_dataframe, preprocess_dataframe
+from lead_scoring.artifacts import load_artifacts  # noqa: E402
+from lead_scoring.model import LeadMLP  # noqa: E402
+from lead_scoring.preprocess import clean_raw_dataframe, preprocess_dataframe  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -256,7 +256,8 @@ def main() -> int:
     )
     print(
         f"saved: {result['out_path']} | best_epoch={result['best_epoch']} "
-        f"| best_val_loss={result['best_val_loss']:.6f} | best_val_acc={result['best_val_acc']:.4f} "
+        f"| best_val_loss={result['best_val_loss']:.6f} "
+        f"| best_val_acc={result['best_val_acc']:.4f} "
         f"| best_threshold={result['best_threshold']:.2f}"
     )
 

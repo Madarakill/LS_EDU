@@ -14,14 +14,18 @@ from lead_scoring.preprocess import preprocess_dataframe
 
 @dataclass(frozen=True)
 class PredictionResult:
-    
+
     probabilities: np.ndarray
     labels: np.ndarray
     y_true: np.ndarray | None
 
 
-def load_model(model_path: str | Path, input_dim: int | None = None, device: str | None = None) -> LeadMLP:
-    
+def load_model(
+    model_path: str | Path,
+    input_dim: int | None = None,
+    device: str | None = None,
+) -> LeadMLP:
+
     #Загрузка модели
     chosen_device = torch.device(device or "cpu")
     state_dict = torch.load(str(model_path), map_location=chosen_device)
@@ -38,7 +42,8 @@ def load_model(model_path: str | Path, input_dim: int | None = None, device: str
 
     if input_dim is not None and int(input_dim) != expected_dim:
         raise ValueError(
-            f"Модель ожидает input_dim={expected_dim}, но артефакты предоставляют input_dim={int(input_dim)}."
+            f"Модель ожидает input_dim={expected_dim}, "
+            f"но артефакты предоставляют input_dim={int(input_dim)}."
         )
 
     model = LeadMLP(expected_dim).to(chosen_device)

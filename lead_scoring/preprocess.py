@@ -67,8 +67,8 @@ def preprocess_dataframe(
     config: dict[str, Any],
     feature_names: list[str],
 ) -> PreprocessResult:
-    # Предобработка набора данных как в ноутбуке, игнорирование новых признаков отстутствующих на обучении
-    # Создание отсутствующих колонок и фиксация порядка
+    # Предобработка набора данных как в ноутбуке, игнорирование новых признаков,
+    # отсутствующих на обучении. Создание отсутствующих колонок и фиксация порядка
     target_col = config["target_col"]
     raw_num_cols: list[str] = config["raw_num_cols"]
     raw_cat_cols: list[str] = config["raw_cat_cols"]
@@ -132,7 +132,8 @@ def preprocess_dataframe(
     for col in df.select_dtypes(include=["object"]).columns:
         df[col] = df[col].fillna(unknown_value)
 
-    # Удаляем низковариативные колонки (где проктически все значения одинаковы, как было сделаено на обучении)
+    # Удаляем низковариативные колонки (где практически все значения одинаковы,
+    # как было сделано на обучении)
     df = df.drop(columns=[c for c in low_var_cols if c in df.columns], errors="ignore")
 
     # Выровнение схемы как в обучении (создание отсутствующих колонок и нормализовать формат)

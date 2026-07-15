@@ -14,7 +14,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from lead_scoring.preprocess import clean_raw_dataframe
+from lead_scoring.preprocess import clean_raw_dataframe  # noqa: E402
 
 
 def _to_dense(matrix):
@@ -28,7 +28,8 @@ def main() -> int:
     # - читает исходный датасет `Lead Scoring.csv`
     # - повторяет ключевые шаги очистки/преобразований (как сделано в ноутбуке с анализом)
     # - кодирование категорий OneHot и скейлинг числовых на train-части
-    # - сохраняет всё в папку `data/artifacts/`, чтобы инференс работал стабильно на любых новых CSV
+    # - сохраняет всё в папку `data/artifacts/`, чтобы инференс работал стабильно
+    #   на любых новых CSV
     #
     # На выходе создаются файлы:
     # - data/artifacts/ct.joblib: ColumnTransformer (OneHotEncoder + passthrough числовых)
@@ -235,7 +236,10 @@ def main() -> int:
     )
 
     print(f"Артефакты сохранены в: {out_dir}")
-    print(f"Признаков: {len(feature_names)} | Raw: {len(raw_cat_cols)} cat + {len(raw_num_cols)} num")
+    print(
+        f"Признаков: {len(feature_names)} | "
+        f"Raw: {len(raw_cat_cols)} cat + {len(raw_num_cols)} num"
+    )
     return 0
 
 

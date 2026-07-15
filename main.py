@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -279,7 +278,10 @@ def create_app() -> Flask:
                 error=None,
             )
         except Exception as e:
-            return render_template("admin.html", user=get_current_user(), message=None, error=str(e)), 500
+            return (
+                render_template("admin.html", user=get_current_user(), message=None, error=str(e)),
+                500,
+            )
 
     @app.post("/admin/model")
     def admin_upload_model():
@@ -288,11 +290,21 @@ def create_app() -> Flask:
             return gate
 
         if "file" not in request.files:
-            return render_template("admin.html", user=get_current_user(), message=None, error="Нет файла."), 400
+            return (
+                render_template(
+                    "admin.html", user=get_current_user(), message=None, error="Нет файла."
+                ),
+                400,
+            )
 
         file = request.files["file"]
         if not file or not file.filename.lower().endswith(".pt"):
-            return render_template("admin.html", user=get_current_user(), message=None, error="Нужен файл .pt."), 400
+            return (
+                render_template(
+                    "admin.html", user=get_current_user(), message=None, error="Нужен файл .pt."
+                ),
+                400,
+            )
 
         file.save(model_path)
 
@@ -353,12 +365,16 @@ def create_app() -> Flask:
                 message=(
                     f"Обучение завершено. saved={result['out_path']}, "
                     f"best_epoch={result['best_epoch']}, "
-                    f"best_val_loss={result['best_val_loss']:.6f}, best_val_acc={result['best_val_acc']:.4f}"
+                    f"best_val_loss={result['best_val_loss']:.6f}, "
+                    f"best_val_acc={result['best_val_acc']:.4f}"
                 ),
                 error=None,
             )
         except Exception as e:
-            return render_template("admin.html", user=get_current_user(), message=None, error=str(e)), 500
+            return (
+                render_template("admin.html", user=get_current_user(), message=None, error=str(e)),
+                500,
+            )
 
     return app
 

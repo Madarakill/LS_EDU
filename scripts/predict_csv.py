@@ -10,14 +10,15 @@ import pandas as pd
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from lead_scoring.artifacts import load_artifacts
-from lead_scoring.predict import load_model, predict_dataframe
+from lead_scoring.artifacts import load_artifacts  # noqa: E402
+from lead_scoring.predict import load_model, predict_dataframe  # noqa: E402
 
 
 def main() -> int:
     # Проверки работы через консоль
     # Пример:
-    # python scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv --model data/models/model.pt --artifacts data/artifacts
+    # python scripts\predict_csv.py --input leads_1000.csv --output predictions_1000.csv \
+    #   --model data/models/model.pt --artifacts data/artifacts
     data_dir = Path(os.environ.get("LS_DATA_DIR", REPO_ROOT / "data"))
     default_model = Path(os.environ.get("LS_MODEL_PATH", data_dir / "models" / "model.pt"))
     default_artifacts = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
