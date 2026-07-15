@@ -1,21 +1,20 @@
 from __future__ import annotations
 
 import argparse
-import os
-from dataclasses import dataclass
 import json
+import os
+import random
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import random
 import torch
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score
+from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
-
-import sys
 
 # Исполняемый файл для обучения модели через веб-интерфейс
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +22,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from lead_scoring.artifacts import load_artifacts
 from lead_scoring.model import LeadMLP
+from lead_scoring.preprocess import clean_raw_dataframe, preprocess_dataframe
 
 
 @dataclass(frozen=True)
@@ -44,36 +44,19 @@ class NumpyDataset(Dataset):
         return self.x[idx], self.y[idx]
 
 
-def _to_dense(matrix):
-    return matrix.toarray() if hasattr(matrix, "toarray") else np.asarray(matrix)
-
-
 def prepare_raw_dataframe(df: pd.DataFrame, config: dict) -> pd.DataFrame:
-    df = df.copy()
     target_col = config["target_col"]
 
-    df = df.drop(columns=[c for c in config["id_cols"] if c in df.columns], errors="ignore")
-    df = df.drop(columns=[c for c in config["nan_cols"] if c in df.columns], errors="ignore")
-
-    contact_events = set(config.get("contact_events", []))
-    if contact_events and ("Last Activity" in df.columns or "Last Notable Activity" in df.columns):
-        empty = pd.Series([None] * len(df), index=df.index, dtype="object")
-        df["Recent_Contact"] = (
-            df.get("Last Activity", empty).isin(contact_events)
-            | df.get("Last Notable Activity", empty).isin(contact_events)
-        ).astype("int64")
-
-    for col in config["select_cols"]:
-        if col in df.columns:
-            df[col] = df[col].replace(config["placeholders"], np.nan)
-
-    for col in config["map_cols"]:
-        if col in df.columns:
-            df[col] = df[col].map({"Yes": 1, "No": 0})
-
-    unknown_value = config.get("unknown_value", "Unknown")
-    for col in df.select_dtypes(include=["object"]).columns:
-        df[col] = df[col].fillna(unknown_value).astype(str).str.strip().str.lower()
+    df = clean_raw_dataframe(
+        df,
+        id_cols=config["id_cols"],
+        nan_cols=config["nan_cols"],
+        contact_events=set(config.get("contact_events", [])),
+        select_cols=config["select_cols"],
+        placeholders=config["placeholders"],
+        map_cols=config["map_cols"],
+        unknown_value=config.get("unknown_value", "Unknown"),
+    )
 
     for col, median_value in config["num_medians"].items():
         if col in df.columns:
@@ -109,37 +92,14 @@ def split(df: pd.DataFrame, target_col: str) -> Split:
 
 def transform(df: pd.DataFrame, artifacts_dir: str | Path) -> tuple[np.ndarray, np.ndarray]:
     artifacts = load_artifacts(artifacts_dir)
-    target_col = artifacts.config["target_col"]
-
-    y = pd.to_numeric(df[target_col], errors="coerce").astype(np.float32).to_numpy()
-    X = df.drop(columns=[target_col])
-
-    raw_cat_cols = artifacts.config["raw_cat_cols"]
-    raw_num_cols = artifacts.config["raw_num_cols"]
-    medians = artifacts.config["num_medians"]
-    unknown_value = artifacts.config.get("unknown_value", "Unknown")
-
-    for col in raw_cat_cols:
-        if col not in X.columns:
-            X[col] = unknown_value
-        X[col] = X[col].astype(str).fillna(unknown_value).str.strip().str.lower()
-
-    for col in raw_num_cols:
-        if col not in X.columns:
-            X[col] = medians.get(col, 0.0)
-        X[col] = pd.to_numeric(X[col], errors="coerce").fillna(medians.get(col, 0.0))
-
-    X_aligned = X[raw_cat_cols + raw_num_cols]
-    encoded = artifacts.ct.transform(X_aligned)
-    x_dense = _to_dense(encoded)
-    feat_df = pd.DataFrame(x_dense, columns=artifacts.feature_names)
-
-    num_feat_cols = [c for c in artifacts.feature_names if c.startswith("num__")]
-    if num_feat_cols:
-        feat_df[num_feat_cols] = artifacts.scaler.transform(feat_df[num_feat_cols])
-
-    x = feat_df.to_numpy(dtype=np.float32)
-    return x, y
+    result = preprocess_dataframe(
+        df,
+        ct=artifacts.ct,
+        scaler=artifacts.scaler,
+        config=artifacts.config,
+        feature_names=artifacts.feature_names,
+    )
+    return result.x, result.y
 
 
 def train_and_save(

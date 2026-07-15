@@ -19,6 +19,46 @@ def _to_dense(matrix: Any) -> np.ndarray:
     return matrix.toarray() if hasattr(matrix, "toarray") else np.asarray(matrix)
 
 
+def clean_raw_dataframe(
+    df: pd.DataFrame,
+    *,
+    id_cols: list[str],
+    nan_cols: list[str],
+    contact_events: set[str],
+    select_cols: list[str],
+    placeholders: list[str],
+    map_cols: list[str],
+    unknown_value: str = "Unknown",
+) -> pd.DataFrame:
+    # Общие шаги сырой очистки, одинаковые при сборке артефактов и при переобучении:
+    # удаление id/шумных колонок, признак Recent_Contact, замена заглушек на NaN,
+    # маппинг Yes/No, приведение категориальных колонок к нижнему регистру.
+    df = df.copy()
+
+    df = df.drop(columns=[c for c in id_cols if c in df.columns], errors="ignore")
+    df = df.drop(columns=[c for c in nan_cols if c in df.columns], errors="ignore")
+
+    if contact_events and ("Last Activity" in df.columns or "Last Notable Activity" in df.columns):
+        empty = pd.Series([None] * len(df), index=df.index, dtype="object")
+        df["Recent_Contact"] = (
+            df.get("Last Activity", empty).isin(contact_events)
+            | df.get("Last Notable Activity", empty).isin(contact_events)
+        ).astype("int64")
+
+    for col in select_cols:
+        if col in df.columns:
+            df[col] = df[col].replace(placeholders, np.nan)
+
+    for col in map_cols:
+        if col in df.columns:
+            df[col] = df[col].map({"Yes": 1, "No": 0})
+
+    for col in df.select_dtypes(include=["object"]).columns:
+        df[col] = df[col].fillna(unknown_value).astype(str).str.strip().str.lower()
+
+    return df
+
+
 def preprocess_dataframe(
     df: pd.DataFrame,
     *,
@@ -55,8 +95,9 @@ def preprocess_dataframe(
     df = df.drop(columns=[c for c in id_cols if c in df.columns], errors="ignore")
     df = df.drop(columns=[c for c in nan_cols if c in df.columns], errors="ignore")
 
-    # Добавление Recent_Contact, если есть нужные колонки
-    if contact_events:
+    # Добавление Recent_Contact, если есть нужные колонки (пропускаем, если уже посчитан
+    # выше по пайплайну — иначе пересчёт по уже lowercase-строкам даст сплошные нули)
+    if contact_events and "Recent_Contact" not in df.columns:
         last_activity = df.get("Last Activity")
         last_notable = df.get("Last Notable Activity")
         recent_contact = False

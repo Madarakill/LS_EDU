@@ -8,7 +8,6 @@ from uuid import uuid4
 import pandas as pd
 from flask import Flask, Response, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
-from werkzeug.utils import secure_filename
 
 import auth_config
 from lead_scoring.artifacts import load_artifacts
@@ -105,6 +104,10 @@ def create_app() -> Flask:
 
         user = get_current_user()
 
+        # user: порог по умолчанию из артефактов (если есть)
+        # operator/admin: можно менять порог
+        default_threshold = float(app.config["LS_ARTIFACTS"].config.get("threshold", 0.5))
+
         if "file" not in request.files:
             return (
                 render_template(
@@ -132,9 +135,6 @@ def create_app() -> Flask:
                 400,
             )
 
-        # user: порог по умолчанию из артефактов (если есть)
-        # operator/admin: можно менять порог
-        default_threshold = float(app.config["LS_ARTIFACTS"].config.get("threshold", 0.5))
         threshold = default_threshold
         if user and user["role"] in {"operator", "admin"}:
             try:
@@ -294,7 +294,6 @@ def create_app() -> Flask:
         if not file or not file.filename.lower().endswith(".pt"):
             return render_template("admin.html", user=get_current_user(), message=None, error="Нужен файл .pt."), 400
 
-        filename = secure_filename(file.filename) or "model.pt"
         file.save(model_path)
 
         try:
@@ -304,13 +303,13 @@ def create_app() -> Flask:
                 "admin.html",
                 user=get_current_user(),
                 message=None,
-                error=f"Модель сохранена ({filename}), но не загрузилась: {e}",
+                error=f"Модель сохранена ({file.filename}), но не загрузилась: {e}",
             ), 500
 
         return render_template(
             "admin.html",
             user=get_current_user(),
-            message=f"Модель обновлена ({filename}).",
+            message=f"Модель обновлена ({file.filename}).",
             error=None,
         )
 

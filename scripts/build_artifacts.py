@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from lead_scoring.preprocess import clean_raw_dataframe
 
 
 def _to_dense(matrix):
@@ -31,9 +36,8 @@ def main() -> int:
     # - data/artifacts/feature_names.json: фиксированный порядок признаков на вход нейросети
     # - data/artifacts/config.json: параметры очистки/медианы/списки колонок.
 
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = REPO_ROOT
     dataset_path = repo_root / "lead-scoring-dataset" / "Lead Scoring.csv"
-    nn_train_path = repo_root / "nn-dataset" / "leads_train_nn.csv"
     data_dir = Path(os.environ.get("LS_DATA_DIR", repo_root / "data"))
     out_dir = Path(os.environ.get("LS_ARTIFACTS_DIR", data_dir / "artifacts"))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -90,9 +94,6 @@ def main() -> int:
 
     df = pd.read_csv(dataset_path, low_memory=False)
 
-    df = df.drop(columns=[c for c in id_cols if c in df.columns], errors="ignore")
-    df = df.drop(columns=[c for c in nan_cols if c in df.columns], errors="ignore")
-
     # Признак Recent_Contact
     contact_events = {
         "Had a Phone Conversation",
@@ -107,24 +108,17 @@ def main() -> int:
         "View in browser link Clicked",
         "Page Visited on Website",
     }
-    if "Last Activity" in df.columns or "Last Notable Activity" in df.columns:
-        empty = pd.Series([None] * len(df), index=df.index, dtype="object")
-        df["Recent_Contact"] = (
-            df.get("Last Activity", empty).isin(contact_events)
-            | df.get("Last Notable Activity", empty).isin(contact_events)
-        ).astype("int64")
-
-    for col in select_cols:
-        if col in df.columns:
-            df[col] = df[col].replace(placeholders, np.nan)
-
-    for col in map_cols:
-        if col in df.columns:
-            df[col] = df[col].map({"Yes": 1, "No": 0})
-
     unknown_value = "Unknown"
-    for col in df.select_dtypes(include=["object"]).columns:
-        df[col] = df[col].fillna(unknown_value).astype(str).str.strip().str.lower()
+    df = clean_raw_dataframe(
+        df,
+        id_cols=id_cols,
+        nan_cols=nan_cols,
+        contact_events=contact_events,
+        select_cols=select_cols,
+        placeholders=placeholders,
+        map_cols=map_cols,
+        unknown_value=unknown_value,
+    )
 
     num_cols_all = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
     num_cols_all = [c for c in num_cols_all if c != target_col]
